@@ -1,6 +1,7 @@
 import sys
 import random
 import pygame
+from collections import defaultdict
 
 
 # Global initializer
@@ -64,7 +65,7 @@ def main():
 		check_zoom_out()
 		pygame.display.flip()
 					
-		clock.tick(10)	
+		clock.tick(60)	
 		
 
 def draw_cells():
@@ -88,7 +89,7 @@ def toggle_cells(mouse_pos):
 
 def fill_random_cells(center_pos):
 	grid_x, grid_y = center_pos
-	for _ in range(random.randint(5, 10)):  # Fill 5-10 random cells
+	for _ in range(random.randint(5, 20)):  # Fill 5-10 random cells
 		offset_x = random.randint(-2, 2) * GRID_SIZE
 		offset_y = random.randint(-2, 2) * GRID_SIZE
 		new_cell = (grid_x + offset_x, grid_y + offset_y)
@@ -137,56 +138,48 @@ def game_of_life():
 	
 	stable = True
 	
-	if drawn_cells:
-		min_x = min(cell[0] for cell in drawn_cells)
-		max_x = max(cell[0] for cell in drawn_cells)
-		min_y = min(cell[1] for cell in drawn_cells)
-		max_y = max(cell[1] for cell in drawn_cells)
+	cells_neighbors = defaultdict(int)
+	new_cells = set()
 	
-		new_cells = set()
-		old_cells = set()
-		for j in range(min_y-(2*GRID_SIZE), max_y+(2*GRID_SIZE), GRID_SIZE):
-			for i in range(min_x-(2*GRID_SIZE), max_x+(2*GRID_SIZE), GRID_SIZE):
-				count = count_neighbor(i, j)
-				if count == 3:
-					if (i, j) not in drawn_cells:
-						new_cells.add((i, j))
-						stable = False
-				if count < 2 or count > 3:
-					if (i, j) in drawn_cells:
-						old_cells.add((i, j))
-						stable = False
-				
-		drawn_cells.update(new_cells);
-		drawn_cells.difference_update(old_cells);
-		new_cells.clear()
-		old_cells.clear()	
-		draw_cells()
+	for cells in drawn_cells:
+		neighbor_set = collect_neighbors(cells[0], cells[1])
+		for n_cells in neighbor_set:
+			cells_neighbors[n_cells] += 1
+	
+	for cells in cells_neighbors:
+		if cells_neighbors[cells] < 2 or cells_neighbors[cells] > 3:
+			if cells in drawn_cells:
+				stable = False
+		else:
+			if cells_neighbors[cells] == 3:
+				new_cells.add(cells)
+				if cells not in drawn_cells:
+					stable = False
+			else:
+				if cells in drawn_cells:
+					new_cells.add(cells)
+	
+	drawn_cells = new_cells
+	draw_cells()
+	
 	return stable					
 	
 
-def count_neighbor(x, y):
-	global GRID_SIZE, drawn_cells
-	count = 0
+def collect_neighbors(x, y):
+	global GRID_SIZE
 	
-	if (x+GRID_SIZE, y) in drawn_cells:
-		count += 1;
-	if (x-GRID_SIZE, y) in drawn_cells:
-		count += 1;
-	if (x, y+GRID_SIZE) in drawn_cells:
-		count += 1;
-	if (x, y-GRID_SIZE) in drawn_cells:
-		count += 1;
-	if (x+GRID_SIZE, y+GRID_SIZE) in drawn_cells:
-		count += 1;
-	if (x-GRID_SIZE, y-GRID_SIZE) in drawn_cells:
-		count += 1;
-	if (x+GRID_SIZE, y-GRID_SIZE) in drawn_cells:
-		count += 1;
-	if (x-GRID_SIZE, y+GRID_SIZE) in drawn_cells:
-		count += 1;
+	neighbor_set = set()
 	
-	return count
+	neighbor_set.add((x+GRID_SIZE, y))
+	neighbor_set.add((x-GRID_SIZE, y))
+	neighbor_set.add((x, y+GRID_SIZE))
+	neighbor_set.add((x, y-GRID_SIZE))
+	neighbor_set.add((x+GRID_SIZE, y+GRID_SIZE))
+	neighbor_set.add((x-GRID_SIZE, y-GRID_SIZE))
+	neighbor_set.add((x+GRID_SIZE, y-GRID_SIZE))
+	neighbor_set.add((x-GRID_SIZE, y+GRID_SIZE))
+	
+	return neighbor_set
 	
 
 if __name__ == '__main__':
